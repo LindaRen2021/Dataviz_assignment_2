@@ -1,0 +1,253 @@
+---
+title: "Assignment 2"
+subtitle: "Data Visualization STAE04"
+author: "Yiying (Linda) Ren"
+date: "`r Sys.Date()`"
+papersize: a4
+geometry: margin=4cm
+colorlinks: true
+output:
+  pdf_document:
+    number_sections: true
+---
+
+```{r setup, include = FALSE}
+# Setup options for R Markdown
+knitr::opts_chunk$set(
+  echo       = FALSE,    # Do not print code
+  warning    = FALSE,    # Suppress warnings
+  message    = FALSE,    # Suppress messages
+  fig.align  = "center", # Center figures
+  fig.width  = 2.7,      # Good standard figure width for single-panel figures
+  fig.height = 2.4       # Good standard figure height for single-panel figures
+)
+
+library(tidyverse)
+
+# Set a theme for ggplot2
+theme_set(theme_grey(base_size = 10))
+
+# Set options
+options(
+  digits = 3, # limit the number of significant digits
+  width  = 63 # limit the width of code output
+)
+```
+
+
+First, let's download the file and assign the name abalone_raw to it. We explore the data with function `head` and `glimpse` and make sure there is no missing data in the data set.
+
+```{r, echo = F}
+library(tidyverse)
+
+url <- paste0(
+  "https://archive.ics.uci.edu/",
+  "ml/machine-learning-databases/abalone/abalone.data"
+)
+
+abalone_raw <- read_csv(url, col_names = FALSE)
+
+head(abalone_raw, 8)
+glimpse(abalone_raw)
+
+# checking if there is missing values in the data set
+anyNA.data.frame(abalone_raw)
+```
+
+
+# Task 1
+
+Start your report by describing your data set.  
+
+  * Describe what the observations are.   
+The observations are the sex and the various physical measurements of the abalones in Tasmania in 1995, for the study of predicting the age of abalone from its physical measurement.   
+
+  * Where and when was the data collected?   
+This data was collected in Tasmania, Australian in 1995.   
+
+  * How many observations and variables are there?   
+There are 4177 observations and 9 variables in this data set. The variables include one categorical variable (M = male, F = female, I = infant) which could be used as factor to group our observations for further analysis; one discrete variable (X9 = rings) which indicates the age of the abalone; the rest of 7 variables are in continuous form (X2:X8) which are the various physical measurements of abalones. 
+
+## Data Wrangling
+
+The original variable names are NOT informative, need improvement, hence we rename them.
+```{r, echo=FALSE}
+# colnames(abalone_raw) # original variable names are NOT informative, needs improvement
+
+# change variables' names
+abalone <- 
+  abalone_raw %>%
+  rename(sex = X1) %>%  
+  rename(length = X2) %>%
+  rename(diameter = X3) %>%
+  rename(height = X4) %>%
+  rename(whole_weight = X5) %>%
+  rename(shucked_weight = X6) %>%
+  rename(viscera_weight = X7) %>%
+  rename(shell_weight = X8) %>%
+  rename(rings = X9) %>%
+  print(head(3)) # check the names are correct
+
+```
+We transform the class of the variable in the data set and create a new variable age.
+```{r table1, echo=FALSE}
+# transform the class of the variable
+# To include a new variable <age>
+abalone <- 
+  abalone %>%
+  mutate(sex = as.factor(sex)) %>%  
+  mutate(rings = as.integer(rings)) %>%
+  mutate(age = rings + 1.5)
+
+
+# check the result of the transformation with a table 
+abalone %>%
+    head() %>%
+    knitr::kable(
+    caption  = "Table of first 6 obs after transformation",
+    booktabs = TRUE
+    ) 
+  
+```
+
+## Descriptive table of the variables
+
+In Table 2, we outline the properties of the 10 variables in this data set, describing each in terms of its units of measurement and data type (continuous, integer, categorical).   
+
+Table 2: Description of the variables in the transformed data set abalone (collected in Tasmania 1995).
+
+    Variable        Data Type         Class           Description
+---------------   -------------     --------   -------------------------------------
+sex               categorical         factor    F = female, M = male, I = infant
+length            continuous          double    longest shell measurement in mm       
+diameter          continuous          double    perpendicular to length in mm      
+height            continuous          double    with meat in shell in mm      
+whole weight      continuous          double    whole abalone in grams
+shucked weight    continuous          double    weight of meat in grams
+viscera weight    continuous          double    gut weight after bleeding in grams
+shell weight      continuous          double    after being dried in grams
+rings             integer             integer   the rings on the shell
+age               continuous          double    predicated based on number of rings
+
+
+
+
+# Task 2
+## histogram  
+
+We use `binwidth = 1` to create the histogram since 1 year apart for age ranging 1-25 seems reasonable.
+(For the histogram, the Rice rule recommends that the number of bins is 2·n1/3,
+for this data set roughly equals 32. However, 32 bins were not suitable in this case. The
+number of bins chosen was instead 30.)  
+```{r plot1, fig.cap = "The histogram of the variable age (age of the abalone based on the numbers of the rings).", fig.width = 5.1}
+
+p1 <- 
+  abalone %>%
+  ggplot(aes(age)) +
+  geom_histogram( binwidth = 1) +
+  labs(
+    x = "Age (years)", 
+    y = "Number of abalones",
+  )
+  
+
+p1
+```
+## density plot
+We use `bandwidth = 0.5` in orange to get a smoother density line.
+```{r plot2, fig.cap = "The density plot of the variable age (age of the abalone based on the numbers of the rings).", fig.width = 5.1}
+p2 <- 
+  abalone %>%
+  ggplot(aes(age)) +
+  #geom_density() +
+  geom_density(col = "dark orange", bw = 0.5) + #bandwidth = 0.5
+  labs(
+    x = "Age (years)", 
+    y = "Density (%)",
+  )
+  
+p2
+```
+## box plot
+The box plot revealed many outliers to us and showed us that the data for age is clearly right (positively) skewed, which means most of the observations in the data set are older than the median (median is around 11 years old).
+```{r plot3, fig.cap = "The boxplot of the variable age (age of the abalone based on the numbers of the rings).", fig.width = 5.1}
+p3 <- 
+  abalone %>%
+  ggplot(aes(age)) +
+  geom_boxplot() +
+  labs(
+    x = "Age (years)", 
+    y = "Quantile (%)",
+  )
+  
+p3
+
+```
+## Integrated graphic of three plots  
+To present the three plots in one graphic with package `patchwork`.
+
+```{r plot4, fig.cap = "Presentation of three plots in one (patchwork)", fig.width = 8, fig.height = 6, echo=FALSE}
+# to patch the three plots into one graphic
+library(patchwork)
+
+plot_together <- (p1 | p2) / p3
+plot_together + plot_annotation(tag_levels = "A")
+
+```
+## Disscussion about the plots  
+I think the histogram gives us a good idea about the distribution of the data which is right skewed and majority of the abalones are between age of 8 - 13 (clustered around the mean) and that there are a few outliers close to the max age of 30; the density plot shows us the shape of the distribution and it is almost bell shaped as a normal distribution with a mean around 11 and with a right tail; the box plot shows us the data distribution in quantiles and its median and this plot clearly reveals the outliers with both extreme small (age < 5) and large values (age > 17).   
+
+I personally prefer box plot among these three due to the clear visualization of the most important characteristics of variable age: right skewed, extreme small and large values, median around 11 and majority of data lies between 9 - 13. 
+
+Others wrote: he histogram, the density and the box plot give equivalent information since one can
+identify the median and the age distribution. The histogram seems to estimate the den-
+sity reasonably well. However, according to the data-ink ratio, the density presents the
+information most clearly and effectively and is therefore preferred.  
+
+# Task 3  
+
+For your final task, you will analyze a plot using the grammar of graphics.  
+
+## The plot
+```{r plot5, fig.cap = "Scatter Plot of Age and Diameter (Abalones collected in Tasmania 1995)", fig.width = 8, fig.height = 6, echo = F}
+abalone %>%
+  ggplot(aes(age, diameter, color = sex)) +
+    geom_jitter(alpha = 0.5, height = 0, width = 0.5) +
+    scale_color_brewer(palette = "Set2") +
+    labs(
+      y = "Diameter (mm)",
+      x = "Age (years)",
+      color = "Sex"
+    )
+
+```
+## Describe the plot using all the aspects of the grammar (except for facets of which there are none)  
+
+  * layers:
+    + geoms,
+    + data and mappings,
+    + position adjustments;  
+ A beautiful plot used many layers: `geom_jitter` to avoid overlapping of the dots, `height = 0 & width = 0.5` so that the overlapped dots don't stack on top of each other but does spread a little larger horizontally and `alpha = 0.5` for the transparency.   
+data = abalone, mappings are x = Age, y = diameter and grouped by sex. 
+
+  * coordinate system,
+Cartesian coordinate system, very suitable for this plot.
+
+  * scales; and
+Age is in years and the grid line is 5 years apart for 0 - 30 by default.  
+Diameter is in millimeter and the grid line is 0.1 years apart for 0 - 0.7 by default.   
+`Pallett = set2` is suitable for quantitative data. 
+
+  * guides.  
+Informative axes labels with names and units. Good with legend to inform us the categories that various colors represent. 
+
+
+
+
+
+
+
+
+
+
+
